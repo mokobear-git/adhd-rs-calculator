@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ADHD-RS 採点</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --card: #fff; --text: #1c2430; --muted: #667085; --line: #d9dee6;
+    --ia: #1d6fb8; --ia-bg: #e8f1fa; --hi: #c2571a; --hi-bg: #fcefe6; --focus: #2563eb; --warn: #b42318;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #14181f; --card: #1d232d; --text: #e6e9ef; --muted: #98a2b3; --line: #343c4a;
+      --ia: #6db3f2; --ia-bg: #1b3147; --hi: #f0a070; --hi-bg: #43291a; --focus: #7aa7ff; --warn: #f97066;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: system-ui, -apple-system, "Hiragino Kaku Gothic ProN", "Yu Gothic UI", Meiryo, sans-serif;
+    line-height: 1.5;
+  }
+  main { max-width: 720px; margin: 0 auto; padding: 16px 16px 48px; }
+  h1 { font-size: 1.3rem; margin: 8px 0 4px; }
+  .lead { color: var(--muted); font-size: .85rem; margin: 0 0 12px; }
+
+  .summary {
+    position: sticky; top: 0; z-index: 2; background: var(--bg);
+    padding: 8px 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+  }
+  .tile { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; text-align: center; }
+  .tile .label { font-size: .75rem; color: var(--muted); }
+  .tile .value { font-size: 1.6rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .tile .value small { font-size: .8rem; font-weight: 400; color: var(--muted); }
+  .tile.ia { border-color: var(--ia); } .tile.ia .value { color: var(--ia); }
+  .tile.hi { border-color: var(--hi); } .tile.hi .value { color: var(--hi); }
+  .status { grid-column: 1 / -1; font-size: .8rem; color: var(--muted); min-height: 1.2em; }
+  .status.incomplete { color: var(--warn); }
+
+  .legend { font-size: .8rem; color: var(--muted); margin: 8px 0; }
+  .rows { background: var(--card); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+  .row {
+    display: grid; grid-template-columns: 2.2em 5.5em 3em 1fr; align-items: center; gap: 8px;
+    padding: 6px 10px; border-bottom: 1px solid var(--line);
+  }
+  .row:last-child { border-bottom: 0; }
+  .num { font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; }
+  .tag { font-size: .7rem; padding: 2px 6px; border-radius: 99px; text-align: center; white-space: nowrap; }
+  .row.ia .tag { background: var(--ia-bg); color: var(--ia); }
+  .row.hi .tag { background: var(--hi-bg); color: var(--hi); }
+  .box {
+    width: 2.6em; height: 2.4em; font-size: 1.1rem; text-align: center; font-weight: 700;
+    border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--text);
+  }
+  .box:focus, .radios label:focus-within { outline: 2px solid var(--focus); outline-offset: 1px; }
+  .radios { display: flex; gap: 6px; justify-content: flex-end; border: 0; padding: 0; margin: 0; }
+  .radios label {
+    position: relative; width: 2.4em; height: 2.4em; display: grid; place-items: center;
+    border: 1px solid var(--line); border-radius: 8px; cursor: pointer; font-weight: 600;
+    font-variant-numeric: tabular-nums; user-select: none;
+  }
+  .radios input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+  .row.ia .radios label:has(input:checked) { background: var(--ia); border-color: var(--ia); color: #fff; }
+  .row.hi .radios label:has(input:checked) { background: var(--hi); border-color: var(--hi); color: #fff; }
+  @media (prefers-color-scheme: dark) {
+    .radios label:has(input:checked) { color: #10151c !important; }
+  }
+  .actions { margin-top: 16px; display: flex; gap: 8px; flex-wrap: wrap; }
+  button {
+    font: inherit; padding: 8px 16px; border-radius: 8px; border: 1px solid var(--line);
+    background: var(--card); color: var(--text); cursor: pointer;
+  }
+  button:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+  .note { font-size: .75rem; color: var(--muted); margin-top: 16px; }
+  @media (max-width: 420px) {
+    .row { grid-template-columns: 1.8em 3em 1fr; }
+    .tag { display: none; }
+    .row.ia .num { color: var(--ia); } .row.hi .num { color: var(--hi); }
+  }
+  @media print { .actions, .note { display: none; } .summary { position: static; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>ADHD-RS 採点</h1>
+  <p class="lead">各項目 0–3 点。奇数番号＝不注意、偶数番号＝多動・衝動性。</p>
+
+  <section class="summary" aria-live="polite">
+    <div class="tile ia"><div class="label">不注意（奇数）</div><div class="value"><span id="sumIA">0</span><small> / 27</small></div></div>
+    <div class="tile hi"><div class="label">多動・衝動性（偶数）</div><div class="value"><span id="sumHI">0</span><small> / 27</small></div></div>
+    <div class="tile"><div class="label">合計</div><div class="value"><span id="sumAll">0</span><small> / 54</small></div></div>
+    <div class="status" id="status"></div>
+  </section>
+
+  <p class="legend">数字ボックスに 0–3 を入力すると次の項目へ自動移動（Backspace で前の項目へ戻る）。右側のボタン選択でも入力可。両者は連動。</p>
+
+  <div class="rows" id="rows"></div>
+
+  <div class="actions">
+    <button type="button" id="reset">リセット</button>
+    <button type="button" id="copy">結果をコピー</button>
+  </div>
+  <p class="note">入力内容は保存・送信されない（ブラウザ内でのみ計算）。項目文は著作権保護のため非掲載。記入済みの質問紙を見ながら番号順に入力する想定。</p>
+</main>
+
+<script>
+(() => {
+  const N = 18;
+  const scores = Array(N).fill(null);
+  const rows = document.getElementById('rows');
+  const boxes = [];
+
+  for (let i = 0; i < N; i++) {
+    const n = i + 1, ia = n % 2 === 1;
+    const row = document.createElement('div');
+    row.className = 'row ' + (ia ? 'ia' : 'hi');
+    const kind = ia ? '不注意' : '多動・衝動性';
+    row.innerHTML =
+      `<span class="num">${n}</span>` +
+      `<span class="tag">${ia ? '不注意' : '多動･衝動'}</span>` +
+      `<input class="box" type="text" inputmode="numeric" maxlength="1" autocomplete="off" aria-label="項目${n}（${kind}）の点数 0〜3">` +
+      `<fieldset class="radios" aria-label="項目${n}の点数">` +
+      [0, 1, 2, 3].map(v => `<label><input type="radio" name="q${n}" value="${v}">${v}</label>`).join('') +
+      `</fieldset>`;
+    rows.appendChild(row);
+
+    const box = row.querySelector('.box');
+    boxes.push(box);
+
+    box.addEventListener('focus', () => box.select());
+    box.addEventListener('input', () => {
+      // 全角数字も許容。0–3 以外は破棄。
+      const ch = box.value.normalize('NFKC').replace(/[^0-3]/g, '').slice(-1);
+      if (ch === '') { setScore(i, null); return; }
+      setScore(i, Number(ch));
+      if (i + 1 < N) boxes[i + 1].focus(); else box.select();
+    });
+    box.addEventListener('keydown', e => {
+      if (e.key === 'Backspace' && box.value === '' && i > 0) {
+        e.preventDefault(); boxes[i - 1].focus();
+      } else if (e.key === 'ArrowDown' || e.key === 'Enter') {
+        e.preventDefault(); if (i + 1 < N) boxes[i + 1].focus();
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault(); if (i > 0) boxes[i - 1].focus();
+      }
+    });
+    row.querySelectorAll('input[type=radio]').forEach(r =>
+      r.addEventListener('change', () => setScore(i, Number(r.value))));
+  }
+
+  function setScore(i, v) {
+    scores[i] = v;
+    boxes[i].value = v === null ? '' : String(v);
+    document.querySelectorAll(`input[name=q${i + 1}]`).forEach(r => { r.checked = v !== null && Number(r.value) === v; });
+    update();
+  }
+
+  function totals() {
+    let ia = 0, hi = 0;
+    scores.forEach((v, i) => { if (v !== null) { if (i % 2 === 0) ia += v; else hi += v; } });
+    const missing = scores.map((v, i) => v === null ? i + 1 : null).filter(Boolean);
+    return { ia, hi, all: ia + hi, missing };
+  }
+
+  function update() {
+    const t = totals();
+    document.getElementById('sumIA').textContent = t.ia;
+    document.getElementById('sumHI').textContent = t.hi;
+    document.getElementById('sumAll').textContent = t.all;
+    const s = document.getElementById('status');
+    if (t.missing.length === 0) { s.textContent = '全18項目入力済み'; s.className = 'status'; }
+    else if (t.missing.length === N) { s.textContent = '未入力'; s.className = 'status'; }
+    else { s.textContent = `未入力 ${t.missing.length} 項目: ${t.missing.join(', ')}（暫定値）`; s.className = 'status incomplete'; }
+  }
+
+  document.getElementById('reset').addEventListener('click', () => {
+    for (let i = 0; i < N; i++) setScore(i, null);
+    boxes[0].focus();
+  });
+
+  document.getElementById('copy').addEventListener('click', async e => {
+    const t = totals();
+    let text = `ADHD-RS 不注意 ${t.ia}/27, 多動・衝動性 ${t.hi}/27, 合計 ${t.all}/54`;
+    if (t.missing.length) text += `（未入力: ${t.missing.join(', ')}）`;
+    const btn = e.currentTarget;
+    try { await navigator.clipboard.writeText(text); btn.textContent = 'コピー済み'; }
+    catch { btn.textContent = 'コピー不可'; }
+    setTimeout(() => { btn.textContent = '結果をコピー'; }, 1500);
+  });
+
+  update();
+  boxes[0].focus();
+})();
+</script>
+</body>
+</html>
