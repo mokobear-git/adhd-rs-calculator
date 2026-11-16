@@ -181,8 +181,7 @@
 
   document.getElementById('copy').addEventListener('click', async e => {
     const t = totals();
-    let text = `ADHD-RS 不注意 ${t.ia}/27, 多動・衝動性 ${t.hi}/27, 合計 ${t.all}/54`;
-    if (t.missing.length) text += `（未入力: ${t.missing.join(', ')}）`;
+    const text = `合計${t.all}点(不注意${t.ia} 多動${t.hi})`;
     const btn = e.currentTarget;
     try { await navigator.clipboard.writeText(text); btn.textContent = 'コピー済み'; }
     catch { btn.textContent = 'コピー不可'; }
